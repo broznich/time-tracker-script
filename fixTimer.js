@@ -1,5 +1,5 @@
 // ==UserScript==
-// @name       HideTimer
+// @name       fixTimer
 // @version    0.50
 // @description Hide timer on top in redmine
 // @match      http://rm.innomdc.com/*

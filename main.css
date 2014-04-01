@@ -1,0 +1,19 @@
+#top-menu .ht-main a {
+    margin-right: 4px; 
+}
+
+.ht-main {
+    vertical-align: top; 
+} 
+
+.ht-main .ht-main-link { 
+    display: inline-block; 
+    vertical-align: top; 
+    width: 16px; 
+    height: 16px; 
+    cursor: pointer; 
+} 
+
+.ht-main .ht-main-link.ht-main-link-title { 
+    width: auto; 
+}

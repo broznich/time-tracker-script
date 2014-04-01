@@ -1,12 +1,11 @@
 (function(baseUrl){
-    var baseUrl = location.protocol + '//rawgithub.com/broznich/time-tracker-script/master/';
     var files = [
         'main.css',
         'timer.js'
     ];
 
     files.forEach(function(file){
-        var extns = files.match(/\.(\w{2,4})$/),
+        var extns = file.match(/\.(\w{2,4})$/),
             el;
 
         extns = extns && extns[1];

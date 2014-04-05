@@ -27,6 +27,13 @@ Timer.prototype = {
 			self = this;
 			
 		container.className = 'ht-main';
+        
+        var timer = this.generateLink(
+			function(e){
+				//do nothing;
+			},
+			'ht-main-item-timer'
+		);
 			
 		var start = this.generateLink(
 			function(e){
@@ -61,25 +68,20 @@ Timer.prototype = {
         var loader = document.createElement('p');
         loader.className = 'ht-main-item-loader';
 		
-		[start, pause, stop, title, loader].forEach(function(item){
+		[timer, start, pause, stop, title, loader].forEach(function(item){
 			container.appendChild(item);
 		});
 		
+        this.views.timer = timer;
 		this.views.start = start;
 		this.views.stop = stop;
 		this.views.pause = pause;
         this.views.loader = loader;
-		
+        
+        timer.style.display = 'none';
 		this.views.titleEl = title;
 		
 		base.insertBefore(container, orig.nextSibling);
-		
-		//orig.style.display = 'none';
-        var timers = Array.prototype.slice.call(document.querySelectorAll('a.tt_stop,a.tt_start'));
-        
-        timers.forEach(function(el){
-            el.style.display = 'none';
-        });
 	},
 	
 	buildStyles: function(styles){
@@ -107,6 +109,8 @@ Timer.prototype = {
 		}
 		return a;
 	},
+    
+    
 	
 	initStorage: function(){
 		var self = this, data,
@@ -119,14 +123,31 @@ Timer.prototype = {
         
 		this.storage = { //add cache or optimize it
 			get: function(prop){
-                var data = JSON.parse(storage.getItem('ht-mfix'));
+                var data = this.getData();
                 return data[prop];
 			},
+            
 			set: function(prop, val){
-				var data = JSON.parse(storage.getItem('ht-mfix'));
+				var data = this.getData();
                 data[prop] = val;
+                this.setData(data);
+			},
+            
+            clear: function(prop){
+                var data = this.getData();
+                if(data[prop]){
+                    delete data[prop];
+                }
+                this.setData(data);
+            },
+            
+            getData: function(){
+                return JSON.parse(storage.getItem('ht-mfix'));
+            },
+            
+            setData: function(data){
                 storage.setItem('ht-mfix', JSON.stringify(data));
-			}
+            }
 		};
 	},
 	
@@ -147,11 +168,13 @@ Timer.prototype = {
 	
 	onStartButtonClick: function(){
 		var self = this;
-		var task = window.location.href.match(/\d{4,5}$/);
-        var freeze = this.storage.get('freeze');
-        var ctask = this.storage.get('ctask');
+		var task = window.location.href.match(/\/issues\/(\d+)/),
+            data = this.storage.getData();
         
-        task = freeze ? ctask : (task && task[0]);
+        var freeze = data.freeze;
+        var ctask = data.ctask;
+        
+        task = freeze ? ctask : (task && task[1]);
         
 		if(!task){
 			task = prompt('What number of issue will start?');
@@ -162,9 +185,19 @@ Timer.prototype = {
         }
         
 		this.startRequest(task, function(){
-			self.storage.set('ctask', task);
-			self.storage.set('freeze', false);
+            var time = (new Date()).valueOf();
+            if(freeze){
+                time = (time - (1*data.freezets - 1*data.ts));
+                data.freezets = false;
+            }
+            
+            data.ts = time;
+            data.ctask = task;
+            data.freeze = false;
+            
+            self.storage.setData(data);
 			self.changeButtons(false, true, true, task);
+            self.onClockEvent();
 		});
 	},
     
@@ -181,16 +214,26 @@ Timer.prototype = {
         document.addEventListener('visibilitychange', function(){
             self.restoreState();
         });
+        
+        window.setInterval(function(){
+            self.onClockEvent();
+        },60000);
     },
 	
 	onStopButtonClick: function(){
-		var self = this;
+		var self = this,
+            data = this.storage.getData();
 		var freeze = this.storage.get('freeze');
 
         var callback = function(){
-            self.storage.set('ctask', null);
-			self.storage.set('freeze', false);
+            delete data.ts;
+            delete data.freezets;
+            delete data.ctask;
+            delete data.freeze;
+            
+            self.storage.setData(data);
             self.changeButtons(true);
+            self.onClockEvent();
         };
         
 		if(freeze){
@@ -201,20 +244,67 @@ Timer.prototype = {
 	},
 	
 	onPauseButtonClick: function(){
-		var self = this;
+		var self = this,
+            data = this.storage.getData();
         var ctask = this.storage.get('ctask');
         
 		this.stopRequest(function(){
-			self.storage.set('freeze', true);
+            data.freeze = true;
+            data.freezets = (new Date()).valueOf();
+            
+            self.storage.setData(data);
 			self.changeButtons(true, false, true, ctask);
 		});
 	},
+    
+    onClockEvent: function(){
+        var data = this.storage.getData(),
+            clock = this.views.timer;
+        console.log(data);
+        if(data.ts){
+            if(data.freeze){
+                return false;
+            }
+            clock.textContent = this.prepareTime((new Date()).valueOf() - 1*data.ts);
+            if(clock.style.display === 'none'){
+                this.showEl(clock);
+            }
+        } else {
+            if(!(clock.style.display === 'none')){
+                this.hideEl(clock);
+            }
+        }
+
+    },
+    
+    prepareTime: function(ts){
+        if(!ts && ts !== 0){
+            return false;
+        }
+
+        ts = Math.ceil(ts/1000);
+        
+        var m = Math.floor(ts/60),
+            h = Math.floor(m/60);
+    
+        m = (m - h*60);
+    
+        var tplData = [h, (m < 10 ? '0'+m : m)],
+            tIndex = 0;
+        
+        var time = '%s:%s'.replace(/%s/g, function(){
+            return tplData[tIndex++];
+        });
+        
+        return time;
+    },
     
     restoreState: function(){
         var freeze = this.storage.get('freeze');
         var ctask = this.storage.get('ctask');
         
         this.changeButtons((freeze || !ctask), (!freeze && ctask), ctask, ctask);
+        this.onClockEvent();
     },
 	
 	showEl: function(el){

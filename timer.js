@@ -260,7 +260,7 @@ Timer.prototype = {
     onClockEvent: function(){
         var data = this.storage.getData(),
             clock = this.views.timer;
-        console.log(data);
+        
         if(data.ts){
             if(data.freeze){
                 return false;
@@ -360,7 +360,7 @@ Timer.prototype = {
 	},
 	
 	failback: function(){
-		console.log('fail');
+		//console.log('fail');
 	}
 };
 

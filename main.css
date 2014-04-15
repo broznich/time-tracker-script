@@ -17,7 +17,14 @@
     background-position: 0 0; 
     background-color: transparent; 
     background-size: 16px;
-} 
+}
+
+.ht-main .ht-main-item.ht-main-item-timer {
+    padding: 0 8px 0 0;
+    margin: 0;
+    width: auto;
+    display: none;
+}
 
 .ht-main .ht-main-item.ht-main-item-title { 
     width: auto; 
@@ -35,5 +42,9 @@
     background-position: 50% 0;
     background-size: 12px;
     margin: 0;
+    display: none;
+}
+
+a.tt_stop, a.tt_start {
     display: none;
 }

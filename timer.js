@@ -332,12 +332,12 @@ Timer.prototype = {
     },
 	
 	startRequest: function(task, callback){
-		var url = 'http://rm.innomdc.com/time_trackers/start?time_tracker%5Bissue_id%5D='+task+'&time_tracker%5Bactivity_id%5D=9';
+		var url = 'https://rm.innomdc.com/time_trackers/start?time_tracker%5Bissue_id%5D='+task+'&time_tracker%5Bactivity_id%5D=9';
 		this.request(url, callback, this.failback);
 	},
 	
 	stopRequest: function(callback){
-		var url = 'http://rm.innomdc.com/time_trackers/stop';
+		var url = 'https://rm.innomdc.com/time_trackers/stop';
 		this.request(url, callback, this.failback);
 	},
 

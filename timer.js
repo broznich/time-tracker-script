@@ -1,369 +1,89 @@
-var Timer = function(cfg){
-	var el = cfg.timerEl;
-	
-	this.views = {
-        search:					document.getElementById('q'),
-        origTimer: 				el,
-        baseTimerContainer:		el.parentNode,
-        newTimerContainer:		document.createElement('li'),
-	};
-	
-	this.resources = cfg.theme;
-	
-	this.buildHTML();
-	this.buildStyles();
-	this.initStorage();
-    this.initEvents();
-    this.restoreState();
-    
+var Timer = function () {
+    var self = this;
+    this.loadInitialData(function (data) {
+
+
+    });
 };
 
 Timer.prototype = {
-	buildHTML: function(){
-		var container = this.views.newTimerContainer,
-			base = this.views.baseTimerContainer,
-			orig = this.views.origTimer,
-			action = {},
-			self = this;
-			
-		container.className = 'ht-main';
-        
-        var timer = this.generateLink(
-			function(e){
-				//do nothing;
-			},
-			'ht-main-item-timer'
-		);
-			
-		var start = this.generateLink(
-			function(e){
-				self.onStartButtonClick.apply(self, arguments);
-			},
-			'ht-main-item-start'
-		);
-		
-		var stop = this.generateLink(
-			function(e){
-				self.onStopButtonClick.apply(self, arguments);
-			},
-			'ht-main-item-stop'
-		);
-		
-		var pause = this.generateLink(
-			function(e){
-				self.onPauseButtonClick.apply(self, arguments);
-			},
-			'ht-main-item-pause'
-		);
-		
-		var title = this.generateLink(
-			function(e){
-				var s = self.views.search;
-				s.value = this.textContent;
-				s.parentNode.submit();
-			},
-			'ht-main-item-title'
-		);
-
-        var loader = document.createElement('p');
-        loader.className = 'ht-main-item-loader';
-		
-		[timer, start, pause, stop, title, loader].forEach(function(item){
-			container.appendChild(item);
-		});
-		
-        this.views.timer = timer;
-		this.views.start = start;
-		this.views.stop = stop;
-		this.views.pause = pause;
-        this.views.loader = loader;
-        
-        timer.style.display = 'none';
-		this.views.titleEl = title;
-		
-		base.insertBefore(container, orig.nextSibling);
-	},
-	
-	buildStyles: function(styles){
-		var stylesContent = '',
-			self = this;
-		
-		['start', 'pause', 'stop', 'loader'].forEach(function(item){
-			stylesContent += '.ht-main .ht-main-item-'+item+' { background-image: url(data:image/png;base64,'+self.resources[item]+'); } ';
-		});
-		
-		var style = document.createElement('style');
-		style.innerHTML = stylesContent;
-		
-		document.body.appendChild(style);
-	},
-	
-	generateLink: function(handler, className){
-		var a = document.createElement('a');
-		a.className = 'ht-main-item' + (className ? ' '+className : '');
-		if(handler){
-			a.addEventListener('click', function(e){
-				e.preventDefault();
-				handler.apply(this, arguments);
-			});
-		}
-		return a;
-	},
-    
-    
-	
-	initStorage: function(){
-		var self = this, data,
-		storage = window.localStorage;
-
-        var data = storage.getItem('ht-mfix');
-        if(!data){
-            storage.setItem('ht-mfix', JSON.stringify({}));
-        }
-        
-		this.storage = { //add cache or optimize it
-			get: function(prop){
-                var data = this.getData();
-                return data[prop];
-			},
-            
-			set: function(prop, val){
-				var data = this.getData();
-                data[prop] = val;
-                this.setData(data);
-			},
-            
-            clear: function(prop){
-                var data = this.getData();
-                if(data[prop]){
-                    delete data[prop];
-                }
-                this.setData(data);
-            },
-            
-            getData: function(){
-                return JSON.parse(storage.getItem('ht-mfix'));
-            },
-            
-            setData: function(data){
-                storage.setItem('ht-mfix', JSON.stringify(data));
-            }
-		};
-	},
-	
-	changeButtons: function(start, pause, stop, title){
-        start ? this.showEl(this.views.start) : this.hideEl(this.views.start); 
-        stop ? this.showEl(this.views.stop) : this.hideEl(this.views.stop); 
-        pause ? this.showEl(this.views.pause) : this.hideEl(this.views.pause);
-        
-        if(title){
-            this.views.titleEl.textContent = '#' + title;
-            this.showEl(this.views.titleEl);
-        } else {
-            this.views.titleEl.textContent = '';
-            this.hideEl(this.views.titleEl);
-        }
-        
-	},
-	
-	onStartButtonClick: function(){
-		var self = this;
-		var task = window.location.href.match(/\/issues\/(\d+)/),
-            data = this.storage.getData();
-        
-        var freeze = data.freeze;
-        var ctask = data.ctask;
-        
-        task = freeze ? ctask : (task && task[1]);
-        
-		if(!task){
-			task = prompt('What number of issue will start?');
-		}
-		
-        if(!task){
-            return false;
-        }
-        
-		this.startRequest(task, function(){
-            var time = (new Date()).valueOf();
-            if(freeze){
-                time = (time - (1*data.freezets - 1*data.ts));
-                data.freezets = false;
-            }
-            
-            data.ts = time;
-            data.ctask = task;
-            data.freeze = false;
-            
-            self.storage.setData(data);
-			self.changeButtons(false, true, true, task);
-            self.onClockEvent();
-		});
-	},
-    
-    initEvents: function(){
-        var self = this;
-        document.addEventListener('mouseenter', function(){
-            self.restoreState();
-        });
-        
-        window.addEventListener('focus', function(){
-            self.restoreState();
-        });
-        
-        document.addEventListener('visibilitychange', function(){
-            self.restoreState();
-        });
-        
-        window.setInterval(function(){
-            self.onClockEvent();
-        },60000);
-    },
-	
-	onStopButtonClick: function(){
-		var self = this,
-            data = this.storage.getData();
-		var freeze = this.storage.get('freeze');
-
-        var callback = function(){
-            delete data.ts;
-            delete data.freezets;
-            delete data.ctask;
-            delete data.freeze;
-            
-            self.storage.setData(data);
-            self.changeButtons(true);
-            self.onClockEvent();
+    getConfig: function () {
+        return {
+            appKey: window.rmAppKey
         };
-        
-		if(freeze){
-            callback();
-		} else {
-			this.stopRequest(callback);
-		}
-	},
-	
-	onPauseButtonClick: function(){
-		var self = this,
-            data = this.storage.getData();
-        var ctask = this.storage.get('ctask');
-        
-		this.stopRequest(function(){
-            data.freeze = true;
-            data.freezets = (new Date()).valueOf();
-            
-            self.storage.setData(data);
-			self.changeButtons(true, false, true, ctask);
-		});
-	},
-    
-    onClockEvent: function(){
-        var data = this.storage.getData(),
-            clock = this.views.timer;
-        
-        if(data.ts){
-            if(data.freeze){
-                return false;
-            }
-            clock.textContent = this.prepareTime((new Date()).valueOf() - 1*data.ts);
-            if(clock.style.display === 'none'){
-                this.showEl(clock);
-            }
-        } else {
-            if(!(clock.style.display === 'none')){
-                this.hideEl(clock);
-            }
-        }
+    },
+
+    loadRmData: function (codename, callback) {
+        this.rm.request(codename, callback);
+    },
+
+    loadInitialData: function () {
 
     },
-    
-    prepareTime: function(ts){
-        if(!ts && ts !== 0){
-            return false;
-        }
 
-        ts = Math.ceil(ts/1000);
-        
-        var m = Math.floor(ts/60),
-            h = Math.floor(m/60);
-    
-        m = (m - h*60);
-    
-        var tplData = [h, (m < 10 ? '0'+m : m)],
-            tIndex = 0;
-        
-        var time = '%s:%s'.replace(/%s/g, function(){
-            return tplData[tIndex++];
+    applyData: function () {
+
+    },
+
+    loadView: function () {
+
+    },
+
+    initEvents: function () {
+
+    },
+
+    doStart: function () {
+
+    },
+
+    doStop: function () {
+
+    },
+
+    doPause: function () {
+
+    },
+
+    dataReady: function () {
+
+    },
+
+    viewReady: function () {
+
+    },
+
+    appReady: function () {
+
+    },
+
+    start: function () {
+        var self = this;
+
+        this.config = this.getConfig();
+        async.parallel([
+            function (callback) {
+                self.loadInitialData(function (data) {
+                    self.applyData(data, function () {
+                        self.dataReady();
+                        callback();
+                    });
+                });
+            },
+            function (callback) {
+                this.loadView(function () {
+                    self.initEvents();
+                    self.viewReady();
+                    callback();
+                });
+            }
+        ], function () {
+            self.appReady();
         });
-        
-        return time;
-    },
-    
-    restoreState: function(){
-        var freeze = this.storage.get('freeze');
-        var ctask = this.storage.get('ctask');
-        
-        this.changeButtons((freeze || !ctask), (!freeze && ctask), ctask, ctask);
-        this.onClockEvent();
-    },
-	
-	showEl: function(el){
-		el.style.display = 'inline-block';
-	},
-	
-	hideEl: function(el){
-		el.style.display = 'none';
-	},
-    
-    hideAllButtons: function(){
-        var btns = [ this.views.start, this.views.stop, this.views.pause, this.views.titleEl ],
-            self = this;
-        btns.forEach(function(b){
-            self.hideEl(b);
-        });
-    },
-    
-    showLoader: function(){
-        this.showEl(this.views.loader);
-    },
-    
-    hideLoader: function(){
-        this.hideEl(this.views.loader);
-    },
-	
-	startRequest: function(task, callback){
-		var url = 'https://rm.innomdc.com/time_trackers/start?time_tracker%5Bissue_id%5D='+task+'&time_tracker%5Bactivity_id%5D=9';
-		this.request(url, callback, this.failback);
-	},
-	
-	stopRequest: function(callback){
-		var url = 'https://rm.innomdc.com/time_trackers/stop';
-		this.request(url, callback, this.failback);
-	},
-
-	request: function(url, callback, failback){
-        this.showLoader();
-		var req = new XMLHttpRequest(),
-            self = this;
-		req.open('GET', url, true);
-		req.onreadystatechange = function() {
-			if (req.readyState == 4) {
-				if(req.status == 200) {
-					callback && callback();
-				} else {
-					failback && failback();
-				}
-                self.hideLoader();
-			}
-		};
-		req.send(null);
-	},
-	
-	failback: function(){
-		//console.log('fail');
-	}
+    }
 };
 
+var key = "e96d1822f969ca326b0c7bd53bc96152f4986ef8";
 var timerEl = document.querySelector('#account ul li:first-child');
 var theme = {
 	pause: 	'iVBORw0KGgoAAAANSUhEUgAAAEAAAABACAYAAACqaXHeAAAACXBIWXMAAAsTAAALEwEAmpwYAAAAGXRFWHRTb2Z0d2FyZQBBZG9iZSBJbWFnZVJlYWR5ccllPAAABK9JREFUeNrsWktME0EYnn95+ERBfBu1EExM0MBFPaqJjxgfNOq9jd44ITdO1BM3xQs3CQ1XNK2PGF+x8aZeaoyJiQZajRqfgEZgC93ff3YBBW23u8zsbLV/8tOS7j878833f/PP7DJWspKVTJXh+/4m7ir7AJ4M9N3lrfQRpNvtI28mD+S4MkWeJE/QPzHYeDZd1ADg254QY1qbNWhXLRAYRjdsao0WFQD45gIfeCT3TDtukZhhRGBze9TXAODrLqI69FlUlwItpQaGYUtH2ncAYKqzhWadD75asqKMEBvCEDgf9w0AONQRsmbe0zUkDHVdUeUA4OC5kDXzKoyYUH8xqgwAfNVKtIeY4moiCA09cc8BwJdnuOAl5ed8IZqAzbCt15Uwlrtnn97HQPXgTatmiDwF93vGAHxxWoHoFSCK2wei3jAA9YjNFUmzEAIYmRuH1bygoW/NguO48d+j0hmAzw8WMvtBaLwT/3v8oRZe5wuO+8WCxrtRuQxAvc0W1R0P86jyZIJhVmjcb9bmlAWOGIDPdpHyaynbRnc+gvzt7EGRcfPUOQA7n6TlMMDQg0KKR2NCYhxSH9klOQCgLmaTgxMy4/bJA8CYaCaFFgCALi8O0dHZg0MGZAIMBTDA0GXGBSQCMMGKIAXkFEL4eEmT65nzlgFmX2H3+FOxDMApgVXrpLdxeUwruGDYM/mUIQlgIW47EMFx89zsqwwNQEPMCZrbdkTdfwEiCCmnKptzJuXFpeQBYPADEAEAuJ3JwuKSUjTAmgGWMOsAO7dvR2zcXE9IBABiPA/tvJBcFhk3pw10dkbpCABt71iabpD08SqQNPsojQFWJ7rtOpK9v7wlV7j5m+C437xb+omQ2Zl7VUM2YshPiyNlB77Ff8WsWGnt1NDmSMxVnKn+ZQe+13kCwNTdFSH66GP+snD5wW9RTwAwQbi98sH03tsPlig/POrqWNz9cwEGYVpy+Jqr+tnACE1j2PUoFnLnqVs1JExM7aMxYMHyI8NxJQCYINxcFUJFegA8749+VfdwdMYmb9SqEMVwxbEv6h+Pz4JwvZanQ58HmmDmfMXxL/55QWIWhGurt06DIGt1SJiDP/HZf6/IzAEitiZEQESE7BxntrjAIhXBT/5+SWq+Za6u5drQZlPB2W1tuytPfiyu1+T+AOLKuukXJSk10AQjkGemkybVGYtVnvqQZv+yZQbWN3Fn/6Ph+/6l3FX3Q3oK4LvLldbSCFXkS8gX5bhSJx8n/86XOth4NlPUAODbnhrGtDXWoF21QGAYn2BT63BRAYBvLtD+XVtLTVcKapGYYHyEze2jvgYAX3fRzhI2kEvKaxzjygFbOqZ8BwCmOmnQ2jpqTpOsKAax4QMEzo/5BgAc6lhGzaz2eA35DHVdP5QDgIPnSOC0VWoWMOMr1F8cVwYAvmolkYMaxdXEMDT0ZDwHAF+eoVwHUnsAxQAg+Shs6zXctuDuTNDQF9PYs8wPhriY/o55xgB8cbosdzWnDAUdtg9kvWEA6nypy7cWEy217B/ZwdnKjLI8oLuN48b7lJXOAHx+iBWw1hvQeDtH/OGZzoqMm60RoPEOK1nJSubIfgowAHNQTn0Y3MjOAAAAAElFTkSuQmCC',

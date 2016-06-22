@@ -1,90 +1,141 @@
-var Timer = function () {
+var Timer = function (config) {
     var self = this;
+
+    this.initConfig(config);
+    this.createView();
     this.loadInitialData(function (data) {
-
-
+        self.updateView(data);
     });
 };
 
 Timer.prototype = {
-    getConfig: function () {
-        return {
-            appKey: window.rmAppKey
-        };
+    initConfig: function (config) {
+        this.config = config;
     },
 
-    loadRmData: function (codename, callback) {
-        this.rm.request(codename, callback);
+    createView: function () {
+        this.view = new View(this.config);
     },
 
     loadInitialData: function () {
 
     },
 
-    applyData: function () {
+    startTask: function () {
 
     },
 
-    loadView: function () {
+    pauseTask: function () {
 
     },
 
-    initEvents: function () {
+    stopTask: function () {
 
-    },
-
-    doStart: function () {
-
-    },
-
-    doStop: function () {
-
-    },
-
-    doPause: function () {
-
-    },
-
-    dataReady: function () {
-
-    },
-
-    viewReady: function () {
-
-    },
-
-    appReady: function () {
-
-    },
-
-    start: function () {
-        var self = this;
-
-        this.config = this.getConfig();
-        async.parallel([
-            function (callback) {
-                self.loadInitialData(function (data) {
-                    self.applyData(data, function () {
-                        self.dataReady();
-                        callback();
-                    });
-                });
-            },
-            function (callback) {
-                this.loadView(function () {
-                    self.initEvents();
-                    self.viewReady();
-                    callback();
-                });
-            }
-        ], function () {
-            self.appReady();
-        });
     }
 };
 
-var key = "e96d1822f969ca326b0c7bd53bc96152f4986ef8";
-var timerEl = document.querySelector('#account ul li:first-child');
+var View = function (config) {
+    this.container = config.el;
+
+    this.resetStatus();
+
+    this.hideContainer();
+    this.clearContainer();
+
+    this.createElements();
+    this.attachEvents();
+    this.appendElements();
+
+    this.proceedShowHideDependencies();
+};
+
+View.prototype = {
+    getShowHideConfig: function (codename) {
+        var config = {
+            base: {
+                // default
+                // @TODO extend
+            },
+            stopped: {
+                start: true,
+                stop: false,
+                pause: false,
+                timer: false,
+                issue: true
+            },
+            inprogress: {
+                start: false,
+                stop: true,
+                pause: true,
+                timer: true,
+                issue: true
+            },
+            paused: {
+                start: true,
+                stop: true,
+                pause: false,
+                timer: true,
+                issue: true
+            }
+        };
+
+        return config[codename] || config["base"];
+    },
+
+    resetStatus: function () {
+        this.status = null;
+    },
+
+    createElements: function () {
+        var els = {};
+        els.loader = this.createLoaderEl();
+        els.start = this.createStartButton();
+        els.stop = this.createStopButton();
+        els.pause = this.createPauseButton();
+        els.timer = this.createTimerEl();
+
+        this.els = els;
+    },
+
+    appendElements: function () {
+        var parent = this.container,
+            els = this.els;
+
+        parent.appendChild(els.loader);
+        parent.appendChild(els.start);
+        parent.appendChild(els.stop);
+        parent.appendChild(els.pause);
+        parent.appendChild(els.timer);
+    },
+
+    showElement: function (el) {
+        el.style.display = "initial";
+    },
+
+    hideElement: function (el) {
+        el.style.display = "none";
+    },
+
+    proceedShowHideDependencies: function (codename) {
+        codename = codename || "stopped";
+
+        var config = this.getShowHideConfig(codename);
+
+        for (let one in this.els) {
+            if (this.els.hasOwnProperty(one)) {
+                let current = this.els[one],
+                    visible = config[one];
+
+                if (visible) {
+                    this.showElement(current);
+                } else {
+                    this.hideElement(current);
+                }
+            }
+        }
+    }
+}
+
 var theme = {
 	pause: 	'iVBORw0KGgoAAAANSUhEUgAAAEAAAABACAYAAACqaXHeAAAACXBIWXMAAAsTAAALEwEAmpwYAAAAGXRFWHRTb2Z0d2FyZQBBZG9iZSBJbWFnZVJlYWR5ccllPAAABK9JREFUeNrsWktME0EYnn95+ERBfBu1EExM0MBFPaqJjxgfNOq9jd44ITdO1BM3xQs3CQ1XNK2PGF+x8aZeaoyJiQZajRqfgEZgC93ff3YBBW23u8zsbLV/8tOS7j878833f/PP7DJWspKVTJXh+/4m7ir7AJ4M9N3lrfQRpNvtI28mD+S4MkWeJE/QPzHYeDZd1ADg254QY1qbNWhXLRAYRjdsao0WFQD45gIfeCT3TDtukZhhRGBze9TXAODrLqI69FlUlwItpQaGYUtH2ncAYKqzhWadD75asqKMEBvCEDgf9w0AONQRsmbe0zUkDHVdUeUA4OC5kDXzKoyYUH8xqgwAfNVKtIeY4moiCA09cc8BwJdnuOAl5ed8IZqAzbCt15Uwlrtnn97HQPXgTatmiDwF93vGAHxxWoHoFSCK2wei3jAA9YjNFUmzEAIYmRuH1bygoW/NguO48d+j0hmAzw8WMvtBaLwT/3v8oRZe5wuO+8WCxrtRuQxAvc0W1R0P86jyZIJhVmjcb9bmlAWOGIDPdpHyaynbRnc+gvzt7EGRcfPUOQA7n6TlMMDQg0KKR2NCYhxSH9klOQCgLmaTgxMy4/bJA8CYaCaFFgCALi8O0dHZg0MGZAIMBTDA0GXGBSQCMMGKIAXkFEL4eEmT65nzlgFmX2H3+FOxDMApgVXrpLdxeUwruGDYM/mUIQlgIW47EMFx89zsqwwNQEPMCZrbdkTdfwEiCCmnKptzJuXFpeQBYPADEAEAuJ3JwuKSUjTAmgGWMOsAO7dvR2zcXE9IBABiPA/tvJBcFhk3pw10dkbpCABt71iabpD08SqQNPsojQFWJ7rtOpK9v7wlV7j5m+C437xb+omQ2Zl7VUM2YshPiyNlB77Ff8WsWGnt1NDmSMxVnKn+ZQe+13kCwNTdFSH66GP+snD5wW9RTwAwQbi98sH03tsPlig/POrqWNz9cwEGYVpy+Jqr+tnACE1j2PUoFnLnqVs1JExM7aMxYMHyI8NxJQCYINxcFUJFegA8749+VfdwdMYmb9SqEMVwxbEv6h+Pz4JwvZanQ58HmmDmfMXxL/55QWIWhGurt06DIGt1SJiDP/HZf6/IzAEitiZEQESE7BxntrjAIhXBT/5+SWq+Za6u5drQZlPB2W1tuytPfiyu1+T+AOLKuukXJSk10AQjkGemkybVGYtVnvqQZv+yZQbWN3Fn/6Ph+/6l3FX3Q3oK4LvLldbSCFXkS8gX5bhSJx8n/86XOth4NlPUAODbnhrGtDXWoF21QGAYn2BT63BRAYBvLtD+XVtLTVcKapGYYHyEze2jvgYAX3fRzhI2kEvKaxzjygFbOqZ8BwCmOmnQ2jpqTpOsKAax4QMEzo/5BgAc6lhGzaz2eA35DHVdP5QDgIPnSOC0VWoWMOMr1F8cVwYAvmolkYMaxdXEMDT0ZDwHAF+eoVwHUnsAxQAg+Shs6zXctuDuTNDQF9PYs8wPhriY/o55xgB8cbosdzWnDAUdtg9kvWEA6nypy7cWEy217B/ZwdnKjLI8oLuN48b7lJXOAHx+iBWw1hvQeDtH/OGZzoqMm60RoPEOK1nJSubIfgowAHNQTn0Y3MjOAAAAAElFTkSuQmCC',
 	stop:	'iVBORw0KGgoAAAANSUhEUgAAAEAAAABACAYAAACqaXHeAAAACXBIWXMAAAsTAAALEwEAmpwYAAAAGXRFWHRTb2Z0d2FyZQBBZG9iZSBJbWFnZVJlYWR5ccllPAAABJlJREFUeNrsWklMFEEUrd/AiDuL4hZ1MJKQIIGLy01MAGNcmKj3meiNE3Dj5HDihnjhhmHiFc3gEqNinHhyuYwxJCYamdGoUUFAI9AD099fPUDiAlPddnX16Pzkz5JUann1/vu/qpuxvOUtb6oMP1yp465yDuDKQt/376avAA3XQF5P7l+mZYI8Th6jP1HYfj6Z0wDgu74gY1pbZtG2eiAwjF7Y0RrJKQDwbQ9feHj5nbbcIzHDCMPOjoinAcA33UR1GMhQXQq0FBoYgl2dSc8BgIkLLbTrfPElkhVlktgQAn/XkGcAwNHOYGbnXc0hIajsjigHAF+3BzM7r8KICXsuRpQBgK9aifYQVVxNBGBv35DrAODLc1zw4vJjXkQTsB6qLtsSxkL77NMHGKhevGklDJGH4BHXGIAvzioQPQFRrB6MuMMA1MMCreJmMQQw+XfrwhJeBNGvbNUkbxORzgAcaRLd/QDU3HUkV+NIcws/GwixoOZeRC4DUG8TQnbfwyHn6D0XY5gWadhmlQWWGIDP95PyawmhjmsfO1tmPz+Igursh9qnSTkMMPSASyfoP4w9K1wX0MclOQCg3sBUGYoCwBrkAWDM1pOqKwJAF80alu4eLDIg5WeoiAGGLtrSLxGAWZYDISCnEMInq+ss7IJKBphzhQMzz5xlAM4rrnTnpHRrrQ545BNWADiUcrYOkDS2JQ1AA9QRQNLYFkUQElZV1jkEhAFIyAPA4BcgigAQZ0DcSreatV1gMbMOEHHHGSDsMYkAQJTHoojL0AChcdHaHaUlALTD00kaIG7GYzaXoQHZPW7OURoDMhPpFZlM+v66FqfWbvYlBkCv9Bshc0LD60cFxJDfGIcLGr/avhhJD2/YmDndYZhlvxJLFDR+q3QFgPl7G4L0NcC8ZaHCpq8RVwAwQbiz8cHC2dsLFis8OmXrWtz+cwEGIUo5POeqfjYwSdsYcuUs8BsLbpeSODG1j8aABQqPTQwpAcAE4VZZEBXpAfC4P/5F3cPRRZu7Wa5CFENFJ8bVPx5fAuFGOQ+HARc0wYz5opPj3nlBYgmE65t2L4AgKzvEzMWfGvPeKzI/ARHdHCQgwg6eHBM003BR4LO3X5L61VLXKrg2tAlUcSsdbXt9pz/l1mtyvwFxdcvCi5IUGmiC4V9hp+Mm1RmL+s58TLJ/2VKDW+u4s//R8MOVNdxVz0N6COD7fl8mNcJ68tXkq5ZpqZPPkH/jqQ62n0/lNAD4rq+UMW1zZtG2eiAwjM+wo3UipwDAtz10htcqqGufQz0SE4xPsLNjytMA4JtuOlnCNnJJcY3TXDlgV+e85wDAxAVatLaFutMkK4pBbPgI/q5pzwCAo51rqZtNLueQMajs/q4cAHzdTgKnlalJYMYX2HNxRhkA+KqVRA5KFVcTE7C3L+U6APjyHMU6kNoDKAYAyaeg6rJhtwd7d4KGXkxrTzMvGGIxfU67xgB8cbZg+WpOGQo6VA+m3WEA6jzVZcvFRE0t/dcRwhnOjAKBjeJzSktnAI40M8Fcb0DNHWf2duTo4gKz1ghQc5flLW95s2Q/BBgA75XqL8/21I0AAAAASUVORK5CYII=',
@@ -94,7 +145,8 @@ var theme = {
 
 if(timerEl){
     var timer = new Timer({
-        timerEl: 	timerEl,
-        theme:		theme
+        el: 	document.querySelector('#account ul li:first-child'),
+        theme:		theme,
+        key: "e96d1822f969ca326b0c7bd53bc96152f4986ef8"
     });
 }

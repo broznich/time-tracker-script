@@ -39,8 +39,8 @@ var View = function (config) {
 
     this.resetStatus();
 
-    this.hideContainer();
-    this.clearContainer();
+    //this.hideContainer();
+    //this.clearContainer();
 
     this.createElements();
     this.attachEvents();
@@ -53,33 +53,26 @@ View.prototype = {
     getShowHideConfig: function (codename) {
         var config = {
             base: {
-                // default
-                // @TODO extend
-            },
-            stopped: {
                 start: true,
-                stop: false,
-                pause: false,
-                timer: false,
-                issue: true
-            },
-            inprogress: {
-                start: false,
                 stop: true,
                 pause: true,
                 timer: true,
                 issue: true
             },
-            paused: {
-                start: true,
-                stop: true,
+            stopped: {
+                stop: false,
                 pause: false,
-                timer: true,
-                issue: true
+                timer: false
+            },
+            inprogress: {
+                start: false
+            },
+            paused: {
+                pause: false
             }
         };
 
-        return config[codename] || config["base"];
+        return Object.assign({}, config.base, config[codename] || {});
     },
 
     resetStatus: function () {
@@ -96,6 +89,10 @@ View.prototype = {
 
         this.els = els;
     },
+
+    createDomElement: function () {
+
+    }
 
     appendElements: function () {
         var parent = this.container,
@@ -143,10 +140,10 @@ var theme = {
     loader: 'iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAABGdBTUEAAK/INwWK6QAAABl0RVh0U29mdHdhcmUAQWRvYmUgSW1hZ2VSZWFkeXHJZTwAAALPSURBVDjLjZNbSFNxHMcXm+BDBEFBvgRS9CBFrxJRoUlPs4ceJMiHsIshSTdSi7AI1K6KOfOSaZgXQmyic5u3TJ3zNue8TEvP5tl0czed7uy+nW//DV3ajQ58D+fh9/nwP/8fX85s9e1okkySVhKKhCEJqspvYKjoEnrykoOtD08zjbeOU++vxbYKUvdlFqbsjgbACYVDhgcWxfkwDApgVlbBOvUBFlUNVkYqsdxXCl1HIaiWfEzX5mCg6DKas0+BCAYiAnXtA9WWwKSoJHkHo7wcS18FWJS8BiV8htmGJ1BW3kXfy9SwoCg1RhURyCbpOIWsFwviCszUP8KIIA09+edBjg1ybFRfP4SytIOoyDiKhqcXUFFSgJI6cVxEEHr1zPskCr0XVocfbh8Lj5+FzRnAjMGNMdoFrdULyuJF27gFJe1ayRYcEYQiVbs+S9VOdpEMM54gDHY/Zo0eaAgo+76Bt1Id+0akbd4O7xCEIlSux7co7dQw5YBu1ReG2ydsKJXS88UiTfyv8G+CrdQPmvvHaQZjWgcEErrvTzP/FDQOmuQTegYKIihu0/T/t6BeZjohHDXTkzoHbEwAxnU/RGMmFDTNLYjTE0p7+XvorgQeK03i6kiydwhq+1eETUMmVmN2hzfhDbDYcAehs/nQXfYCynsn4Ra9AquWwNl4B6MZxwIdibybYbimzyjtnLJh2e6D0xuEj8CBIAuGfCv1LnRdPAwXgVHMB7L2AnmxsDw/A+lZrobT0DkVV9dvQK96DeYNfxgmbFhgdwXwbcWDrsQosIrQBn8+a7kHEPqdcBempWUYkMsgn7NCb3Fh3UlWaHSg/osWjz9OoCU5BkxVGkAgz30OVknodC7IPSztKNPfuqDI5WP46hEYsmJhzokCdWUXuvm8gCSJ+4Czvc6kwhSpMLNZ4XAXSIWDpMLMp5T9NtE5nnNzC0shOHR/PwBGKPcL7gZY5gAAAABJRU5ErkJggg=='
 };
 
-if(timerEl){
-    var timer = new Timer({
-        el: 	document.querySelector('#account ul li:first-child'),
-        theme:		theme,
-        key: "e96d1822f969ca326b0c7bd53bc96152f4986ef8"
-    });
-}
+
+var view = new View({
+    el: 	document.querySelector('#container'),
+    theme:		theme,
+    key: "e96d1822f969ca326b0c7bd53bc96152f4986ef8"
+});
+
